@@ -1,4 +1,4 @@
-const CACHE_NAME = "nexus-forense-v2";
+const CACHE_NAME = "nexus-forense-v4";
 const BASE_URL = new URL(".", self.registration.scope).pathname;
 const ASSETS = ["", "index.html", "manifest.json", "favicon.svg", "icon-192.png", "icon-512.png"].map(
   (asset) => `${BASE_URL}${asset}`

@@ -38,3 +38,11 @@ Migrar a camada de armazenamento para Firebase Authentication, Firestore e Stora
 ## Licença e uso
 
 Projeto de uso pessoal. Evite inserir dados pessoais reais em ambientes compartilhados ou publicar o diretório de dados do navegador.
+
+## V4 — núcleo de investigação e perícia
+
+A V4 preserva a V3 e adiciona o workspace **Perícia V4** dentro de cada investigação. O módulo reúne cadeia de custódia auxiliar, impressões digitais sem reconhecimento automático, documentos, locais, SHA-256 de arquivos, relatório de integridade e exportação JSON.
+
+Arquivos enviados são armazenados localmente no IndexedDB. Metadados e hashes ficam no localStorage. Para imagens compatíveis com o navegador, o sistema preserva o original e gera preview e thumbnail. Fotos e vídeos podem ser vinculados diretamente a uma evidência.
+
+O aplicativo não envia arquivos para servidores externos, não fornece autenticação corporativa, não cria cadeia de custódia jurídica oficial e não afirma autenticidade apenas porque um hash corresponde. Consulte `RELATORIO-NEXUS-FORENSE-V4.md` para o inventário completo, limitações e instruções de publicação.

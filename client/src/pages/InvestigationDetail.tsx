@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { Activity, Car, ChevronRight, Clock, Fence as EvidenceIcon, FileText, Info, Link2, Network, Pencil, Plus, Trash2, Users, Calendar, Database, ClipboardCheck, ListChecks, Printer, Copy, Wrench, Paperclip, Download, Upload, Fingerprint, Image as ImageIcon } from "lucide-react";
+import { Activity, Car, ChevronRight, Clock, Fence as EvidenceIcon, FileText, Info, Link2, Network, Pencil, Plus, Trash2, Users, Calendar, Database, ClipboardCheck, ListChecks, Printer, Copy, Wrench, Paperclip, Download, Upload, Fingerprint, Image as ImageIcon, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ForensicsTab } from "@/components/ForensicsTab";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,6 +61,8 @@ import {
 import {
   CONFIDENCE_LEVELS,
   EVIDENCE_CATEGORIES,
+  EVIDENCE_STATUSES,
+  EVIDENCE_SUBCATEGORIES,
   EVENT_CATEGORIES,
   INVESTIGATION_STATUSES,
   INVESTIGATION_TYPES,
@@ -217,6 +220,9 @@ export default function InvestigationDetail({ params }: Props) {
             <TabsTrigger value="attachments" className="gap-1.5">
               <Paperclip className="h-4 w-4" /> Anexos
             </TabsTrigger>
+            <TabsTrigger value="forensics" className="gap-1.5">
+              <ShieldCheck className="h-4 w-4" /> Perícia V4
+            </TabsTrigger>
             <TabsTrigger value="board" className="gap-1.5">
               <Network className="h-4 w-4" /> Mural
             </TabsTrigger>
@@ -248,6 +254,9 @@ export default function InvestigationDetail({ params }: Props) {
           </TabsContent>
           <TabsContent value="attachments">
             <AttachmentsTab inv={inv} onRefresh={bump} />
+          </TabsContent>
+          <TabsContent value="forensics">
+            <ForensicsTab inv={inv} onRefresh={bump} />
           </TabsContent>
           <TabsContent value="board">
             <BoardTab data={data} />
@@ -1046,9 +1055,16 @@ function EvidenceTab({
   const [editing, setEditing] = useState<Evidence | null>(null);
   const [form, setForm] = useState({
     name: "",
+    code: "",
     category: "Documento" as EvidenceCategory,
+    subcategory: "Cena do fato",
     description: "",
     origin: "",
+    collectionLocation: "",
+    collectionTime: "",
+    collector: "",
+    registrar: "",
+    status: "Registrada" as Evidence["status"],
     confidence: "Média" as ConfidenceLevel,
     date: new Date().toISOString().slice(0, 10),
     notes: "",
@@ -1058,13 +1074,13 @@ function EvidenceTab({
 
   const startCreate = () => {
     setEditing(null);
-    setForm({ name: "", category: "Documento", description: "", origin: "", confidence: "Média", date: new Date().toISOString().slice(0, 10), notes: "" });
+    setForm({ name: "", code: "", category: "Documento", subcategory: "Cena do fato", description: "", origin: "", collectionLocation: "", collectionTime: "", collector: "", registrar: "", status: "Registrada", confidence: "Média", date: new Date().toISOString().slice(0, 10), notes: "" });
     setOpen(true);
   };
 
   const startEdit = (ev: Evidence) => {
     setEditing(ev);
-    setForm({ name: ev.name, category: ev.category, description: ev.description, origin: ev.origin, confidence: ev.confidence, date: ev.date, notes: ev.notes });
+    setForm({ name: ev.name, code: ev.code || "", category: ev.category, subcategory: ev.subcategory || "Cena do fato", description: ev.description, origin: ev.origin, collectionLocation: ev.collectionLocation || "", collectionTime: ev.collectionTime || "", collector: ev.collector || "", registrar: ev.registrar || "", status: ev.status || "Registrada", confidence: ev.confidence, date: ev.date, notes: ev.notes });
     setOpen(true);
   };
 
@@ -1113,12 +1129,13 @@ function EvidenceTab({
             {items.map((ev) => (
               <div key={ev.id} className="group flex items-start justify-between gap-2 rounded-md border border-border p-3">
                 <div className="min-w-0">
-                  <p className="font-medium">{ev.name}</p>
+                  <p className="font-medium">{ev.code && <span className="mr-2 text-primary">{ev.code}</span>}{ev.name}</p>
                   <div className="flex flex-wrap items-center gap-1.5 py-1">
                     <Badge variant="secondary" className="text-xs">{ev.category}</Badge>
                     <Badge variant={confidenceVariant(ev.confidence)} className="text-xs">
                       Confiança: {ev.confidence}
                     </Badge>
+                    {ev.status && <Badge variant="outline" className="text-xs">{ev.status}</Badge>}
                   </div>
                   <div className="space-y-0.5 text-xs text-muted-foreground">
                     {ev.date && <p>{formatDate(ev.date)}</p>}

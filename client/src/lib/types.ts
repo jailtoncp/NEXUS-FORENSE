@@ -95,6 +95,13 @@ export type EvidenceCategory =
   | "Áudio"
   | "Material"
   | "Digital"
+  | "Material biológico"
+  | "Vestígio"
+  | "Dispositivo eletrônico"
+  | "Impressão digital"
+  | "Arma/objeto"
+  | "Documento financeiro"
+  | "Documento digital"
   | "Testemunhal"
   | "Outro";
 
@@ -105,9 +112,20 @@ export const EVIDENCE_CATEGORIES: EvidenceCategory[] = [
   "Áudio",
   "Material",
   "Digital",
+  "Material biológico",
+  "Vestígio",
+  "Dispositivo eletrônico",
+  "Impressão digital",
+  "Arma/objeto",
+  "Documento financeiro",
+  "Documento digital",
   "Testemunhal",
   "Outro",
 ];
+
+export type EvidenceStatus = "Registrada" | "Em análise" | "Preservada" | "Arquivada";
+export const EVIDENCE_STATUSES: EvidenceStatus[] = ["Registrada", "Em análise", "Preservada", "Arquivada"];
+export const EVIDENCE_SUBCATEGORIES = ["Cena do fato", "Laboratório", "Digital", "Documental", "Biológica", "Financeira", "Outra"] as const;
 
 export type SourceCategory =
   | "Oficial"
@@ -250,6 +268,17 @@ export interface Evidence {
   date: string;
   notes: string;
   createdAt: string;
+  code?: string;
+  subcategory?: string;
+  collectionLocation?: string;
+  collectionTime?: string;
+  collector?: string;
+  registrar?: string;
+  status?: EvidenceStatus;
+  eventId?: UUID;
+  personId?: UUID;
+  vehicleId?: UUID;
+  locationId?: UUID;
 }
 
 export interface Source {
@@ -319,7 +348,25 @@ export interface Attachment {
   size: number;
   description: string;
   createdAt: string;
+  evidenceId?: UUID;
+  sha256?: string;
+  hashCalculatedAt?: string;
+  originalSize?: number;
+  previewSize?: number;
+  width?: number;
+  height?: number;
+  duration?: number;
+  version?: number;
+  role?: "original" | "preview" | "thumbnail";
 }
+
+export type CustodyAction = "Coleta" | "Recebimento" | "Identificação" | "Acondicionamento" | "Transporte" | "Armazenamento" | "Entrega" | "Análise" | "Devolução" | "Descarte" | "Outro";
+export const CUSTODY_ACTIONS: CustodyAction[] = ["Coleta", "Recebimento", "Identificação", "Acondicionamento", "Transporte", "Armazenamento", "Entrega", "Análise", "Devolução", "Descarte", "Outro"];
+export interface CustodyEvent { id: UUID; investigationId: UUID; ownerId: UUID; evidenceId: UUID; date: string; time: string; responsible: string; origin: string; destination: string; action: CustodyAction; description: string; condition: string; notes: string; createdAt: string; }
+export interface FingerprintRecord { id: UUID; investigationId: UUID; ownerId: UUID; personId?: UUID; finger: string; hand: "Direita" | "Esquerda"; classification: string; quality: ConfidenceLevel; location: string; date: string; responsible: string; method: string; notes: string; createdAt: string; }
+export interface DocumentRecord { id: UUID; investigationId: UUID; ownerId: UUID; name: string; type: string; description: string; origin: string; date: string; number: string; responsible: string; notes: string; createdAt: string; }
+export interface Location { id: UUID; investigationId: UUID; ownerId: UUID; name: string; address: string; reference: string; latitude: string; longitude: string; description: string; notes: string; createdAt: string; }
+export interface AuditEntry { id: UUID; investigationId: UUID; ownerId: UUID; action: string; entity: string; description: string; createdAt: string; }
 
 export interface Session {
   userId: UUID | null;

@@ -17,6 +17,11 @@ import type {
   Vehicle,
   Report,
   Diligence,
+  CustodyEvent,
+  FingerprintRecord,
+  DocumentRecord,
+  Location,
+  AuditEntry,
 } from "./types";
 
 const KEYS = {
@@ -31,6 +36,11 @@ const KEYS = {
   relevantInfo: "nexus:relevant_info",
   reports: "nexus:reports",
   diligences: "nexus:diligences",
+  custody: "nexus:custody",
+  fingerprints: "nexus:fingerprints",
+  documents: "nexus:documents",
+  locations: "nexus:locations",
+  audit: "nexus:audit",
 } as const;
 
 function read<T>(key: string): T[] {
@@ -244,6 +254,11 @@ export const investigations = {
     reports.removeAllByInvestigation(ownerId, id);
     diligences.removeAllByInvestigation(ownerId, id);
     void attachments.removeAllByInvestigation(ownerId, id);
+    custody.removeAllByInvestigation(ownerId, id);
+    fingerprints.removeAllByInvestigation(ownerId, id);
+    documents.removeAllByInvestigation(ownerId, id);
+    locations.removeAllByInvestigation(ownerId, id);
+    audit.removeAllByInvestigation(ownerId, id);
   },
 };
 
@@ -259,6 +274,11 @@ export const sources = crud<Source>(KEYS.sources);
 export const relevantInfo = crud<RelevantInfo>(KEYS.relevantInfo);
 export const reports = crud<Report>(KEYS.reports);
 export const diligences = crud<Diligence>(KEYS.diligences);
+export const custody = crud<CustodyEvent>(KEYS.custody);
+export const fingerprints = crud<FingerprintRecord>(KEYS.fingerprints);
+export const documents = crud<DocumentRecord>(KEYS.documents);
+export const locations = crud<Location>(KEYS.locations);
+export const audit = crud<AuditEntry>(KEYS.audit);
 
 // ---------------------------------------------------------------------------
 // Search
