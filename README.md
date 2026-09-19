@@ -9,6 +9,8 @@ Workspace investigativo em formato PWA para organizar casos, fontes públicas, e
 - Dashboard com indicadores calculados a partir dos dados reais do navegador.
 - CRUD de investigações, pessoas, informações relevantes, veículos, eventos, evidências e fontes.
 - Linha do tempo cronológica, busca global e mural de relações por investigação.
+- Geração local de laudos técnicos, pareceres técnicos e relatórios investigativos, com edição, impressão e cópia do texto.
+- Gestão de diligências, perícias, entrevistas e requisições com prioridade, responsável, prazo e status.
 - Estados vazios para iniciar o uso sem dados fictícios.
 - Manifesto e service worker básicos para instalação como PWA.
 
