@@ -14,6 +14,8 @@ import type {
   User,
   UUID,
   Vehicle,
+  Report,
+  Diligence,
 } from "./types";
 
 const KEYS = {
@@ -26,6 +28,8 @@ const KEYS = {
   evidence: "nexus:evidence",
   sources: "nexus:sources",
   relevantInfo: "nexus:relevant_info",
+  reports: "nexus:reports",
+  diligences: "nexus:diligences",
 } as const;
 
 function read<T>(key: string): T[] {
@@ -236,6 +240,8 @@ export const investigations = {
     evidence.removeAllByInvestigation(ownerId, id);
     sources.removeAllByInvestigation(ownerId, id);
     relevantInfo.removeAllByInvestigation(ownerId, id);
+    reports.removeAllByInvestigation(ownerId, id);
+    diligences.removeAllByInvestigation(ownerId, id);
   },
 };
 
@@ -249,6 +255,8 @@ export const events = crud<TimelineEvent>(KEYS.events);
 export const evidence = crud<Evidence>(KEYS.evidence);
 export const sources = crud<Source>(KEYS.sources);
 export const relevantInfo = crud<RelevantInfo>(KEYS.relevantInfo);
+export const reports = crud<Report>(KEYS.reports);
+export const diligences = crud<Diligence>(KEYS.diligences);
 
 // ---------------------------------------------------------------------------
 // Search
@@ -387,6 +395,36 @@ export function searchAll(ownerId: UUID, query: string): SearchResult[] {
         investigationId: r.investigationId,
         title: r.label,
         subtitle: `${r.value}${inv ? " • " + inv.title : ""}`,
+      });
+    }
+  }
+  for (const r of reports.list(ownerId)) {
+    if (
+      match(r.title) || match(r.kind) || match(r.status) || match(r.responsible) ||
+      match(r.objective) || match(r.findings) || match(r.conclusion) || match(r.notes)
+    ) {
+      const inv = invMap.get(r.investigationId);
+      results.push({
+        type: "laudo",
+        id: r.id,
+        investigationId: r.investigationId,
+        title: r.title,
+        subtitle: `${r.kind} • ${r.status}${inv ? " • " + inv.title : ""}`,
+      });
+    }
+  }
+  for (const d of diligences.list(ownerId)) {
+    if (
+      match(d.title) || match(d.category) || match(d.status) || match(d.priority) ||
+      match(d.responsible) || match(d.notes)
+    ) {
+      const inv = invMap.get(d.investigationId);
+      results.push({
+        type: "diligência",
+        id: d.id,
+        investigationId: d.investigationId,
+        title: d.title,
+        subtitle: `${d.priority} • ${d.status}${inv ? " • " + inv.title : ""}`,
       });
     }
   }

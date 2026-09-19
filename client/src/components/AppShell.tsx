@@ -68,6 +68,8 @@ export function AppShell({ children, title, showBack }: AppShellProps) {
     evidência: "text-rose-400",
     fonte: "text-cyan-400",
     informação: "text-orange-400",
+    laudo: "text-indigo-400",
+    diligência: "text-lime-400",
   };
 
   return (

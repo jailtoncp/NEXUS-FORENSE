@@ -124,6 +124,38 @@ export const SOURCE_CATEGORIES: SourceCategory[] = [
   "Outro",
 ];
 
+export type ReportKind = "Laudo técnico" | "Parecer técnico" | "Relatório investigativo";
+export type ReportStatus = "Rascunho" | "Em revisão" | "Concluído";
+
+export const REPORT_KINDS: ReportKind[] = [
+  "Laudo técnico",
+  "Parecer técnico",
+  "Relatório investigativo",
+];
+
+export const REPORT_STATUSES: ReportStatus[] = [
+  "Rascunho",
+  "Em revisão",
+  "Concluído",
+];
+
+export type DiligenceStatus = "Planejada" | "Em andamento" | "Concluída" | "Cancelada";
+export type DiligencePriority = "Baixa" | "Média" | "Alta" | "Urgente";
+
+export const DILIGENCE_STATUSES: DiligenceStatus[] = [
+  "Planejada",
+  "Em andamento",
+  "Concluída",
+  "Cancelada",
+];
+
+export const DILIGENCE_PRIORITIES: DiligencePriority[] = [
+  "Baixa",
+  "Média",
+  "Alta",
+  "Urgente",
+];
+
 export interface User {
   id: UUID;
   name: string;
@@ -224,6 +256,38 @@ export interface RelevantInfo {
   createdAt: string;
 }
 
+export interface Report {
+  id: UUID;
+  investigationId: UUID;
+  ownerId: UUID;
+  title: string;
+  kind: ReportKind;
+  status: ReportStatus;
+  responsible: string;
+  date: string;
+  objective: string;
+  methodology: string;
+  findings: string;
+  conclusion: string;
+  recommendations: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface Diligence {
+  id: UUID;
+  investigationId: UUID;
+  ownerId: UUID;
+  title: string;
+  category: string;
+  status: DiligenceStatus;
+  priority: DiligencePriority;
+  dueDate: string;
+  responsible: string;
+  notes: string;
+  createdAt: string;
+}
+
 export interface Session {
   userId: UUID | null;
 }
@@ -236,7 +300,9 @@ export interface SearchResult {
     | "evento"
     | "evidência"
     | "fonte"
-    | "informação";
+    | "informação"
+    | "laudo"
+    | "diligência";
   id: UUID;
   investigationId?: UUID;
   title: string;

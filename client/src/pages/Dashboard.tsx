@@ -49,6 +49,8 @@ import {
   investigations as invStore,
   people,
   vehicles,
+  reports,
+  diligences,
 } from "@/lib/storage";
 import {
   INVESTIGATION_STATUSES,
@@ -109,7 +111,9 @@ export default function Dashboard() {
     const veh = vehicles.list(uid).length;
     const ev = events.list(uid).length;
     const evi = evidence.list(uid).length;
-    return { invs, active, concluded, archived, ppl, veh, ev, evi };
+    const reportCount = reports.list(uid).length;
+    const diligenceCount = diligences.list(uid).length;
+    return { invs, active, concluded, archived, ppl, veh, ev, evi, reportCount, diligenceCount };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, refresh]);
 
@@ -196,6 +200,18 @@ export default function Dashboard() {
       value: stats.evi,
       icon: EvidenceIcon,
       color: "text-rose-400",
+    },
+    {
+      label: "Laudos",
+      value: stats.reportCount,
+      icon: FileText,
+      color: "text-indigo-400",
+    },
+    {
+      label: "Diligências",
+      value: stats.diligenceCount,
+      icon: CheckCircle2,
+      color: "text-lime-400",
     },
   ];
 

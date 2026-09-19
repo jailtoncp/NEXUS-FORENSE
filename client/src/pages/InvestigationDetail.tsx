@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { Activity, Car, ChevronRight, Clock, Fence as EvidenceIcon, FileText, Info, Link2, Network, Pencil, Plus, Trash2, Users, Calendar, Database } from "lucide-react";
+import { Activity, Car, ChevronRight, Clock, Fence as EvidenceIcon, FileText, Info, Link2, Network, Pencil, Plus, Trash2, Users, Calendar, Database, ClipboardCheck, ListChecks, Printer, Copy, Wrench } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +53,8 @@ import {
   relevantInfo as infoStore,
   sources as sourcesStore,
   vehicles as vehiclesStore,
+  reports as reportsStore,
+  diligences as diligencesStore,
 } from "@/lib/storage";
 import {
   CONFIDENCE_LEVELS,
@@ -76,6 +78,16 @@ import {
   type SourceCategory,
   type TimelineEvent,
   type Vehicle,
+  DILIGENCE_PRIORITIES,
+  DILIGENCE_STATUSES,
+  REPORT_KINDS,
+  REPORT_STATUSES,
+  type Diligence,
+  type DiligencePriority,
+  type DiligenceStatus,
+  type Report,
+  type ReportKind,
+  type ReportStatus,
 } from "@/lib/types";
 
 function formatDate(iso: string): string {
@@ -121,6 +133,8 @@ export default function InvestigationDetail({ params }: Props) {
       evidence: evidenceStore.listByInvestigation(uid, params.id),
       sources: sourcesStore.listByInvestigation(uid, params.id),
       info: infoStore.listByInvestigation(uid, params.id),
+      reports: reportsStore.listByInvestigation(uid, params.id),
+      diligences: diligencesStore.listByInvestigation(uid, params.id),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, params.id, refresh]);
@@ -190,6 +204,12 @@ export default function InvestigationDetail({ params }: Props) {
             <TabsTrigger value="sources" className="gap-1.5">
               <Database className="h-4 w-4" /> Fontes
             </TabsTrigger>
+            <TabsTrigger value="reports" className="gap-1.5">
+              <ClipboardCheck className="h-4 w-4" /> Laudos
+            </TabsTrigger>
+            <TabsTrigger value="tools" className="gap-1.5">
+              <Wrench className="h-4 w-4" /> Ferramentas
+            </TabsTrigger>
             <TabsTrigger value="board" className="gap-1.5">
               <Network className="h-4 w-4" /> Mural
             </TabsTrigger>
@@ -212,6 +232,12 @@ export default function InvestigationDetail({ params }: Props) {
           </TabsContent>
           <TabsContent value="sources">
             <SourcesTab inv={inv} onRefresh={bump} />
+          </TabsContent>
+          <TabsContent value="reports">
+            <ReportsTab inv={inv} onRefresh={bump} />
+          </TabsContent>
+          <TabsContent value="tools">
+            <DiligencesTab inv={inv} onRefresh={bump} />
           </TabsContent>
           <TabsContent value="board">
             <BoardTab data={data} />
@@ -1328,6 +1354,85 @@ function SourcesTab({
       </Dialog>
     </Card>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Reports and forensic tools
+// ---------------------------------------------------------------------------
+
+function ReportsTab({ inv, onRefresh }: { inv: Investigation; onRefresh: () => void }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Report | null>(null);
+  const [form, setForm] = useState({
+    title: "", kind: "Laudo técnico" as ReportKind, status: "Rascunho" as ReportStatus,
+    responsible: "", date: new Date().toISOString().slice(0, 10), objective: "",
+    methodology: "", findings: "", conclusion: "", recommendations: "", notes: "",
+  });
+  const items = reportsStore.listByInvestigation(user!.id, inv.id);
+
+  const reset = () => setForm({ title: "", kind: "Laudo técnico", status: "Rascunho", responsible: "", date: new Date().toISOString().slice(0, 10), objective: "", methodology: "", findings: "", conclusion: "", recommendations: "", notes: "" });
+  const startCreate = () => { setEditing(null); reset(); setOpen(true); };
+  const startEdit = (r: Report) => {
+    setEditing(r);
+    setForm({ title: r.title, kind: r.kind, status: r.status, responsible: r.responsible, date: r.date, objective: r.objective, methodology: r.methodology, findings: r.findings, conclusion: r.conclusion, recommendations: r.recommendations, notes: r.notes });
+    setOpen(true);
+  };
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !form.title.trim()) { toast.error("Informe um título para o documento."); return; }
+    if (editing) { reportsStore.update(user.id, editing.id, form); toast.success("Documento atualizado."); }
+    else { reportsStore.create(user.id, { investigationId: inv.id, ...form }); toast.success("Laudo/parecer criado."); }
+    setOpen(false); onRefresh();
+  };
+  const remove = (id: string) => { if (!user) return; reportsStore.remove(user.id, id); onRefresh(); toast.success("Documento removido."); };
+  const copyText = async (r: Report) => {
+    const text = reportText(inv, r);
+    try { await navigator.clipboard.writeText(text); toast.success("Texto copiado."); }
+    catch { toast.error("Não foi possível copiar neste navegador."); }
+  };
+
+  return <Card>
+    <CardHeader>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><CardTitle className="flex items-center gap-2 text-base"><ClipboardCheck className="h-4 w-4 text-primary" /> Laudos e pareceres</CardTitle><CardDescription>Crie documentos técnicos vinculados exclusivamente a este caso.</CardDescription></div>
+        <Button size="sm" onClick={startCreate}><Plus className="h-4 w-4" /> Gerar laudo/parecer</Button>
+      </div>
+    </CardHeader>
+    <CardContent>
+      {items.length === 0 ? <EmptyState icon={ClipboardCheck} label="Nenhum laudo ou parecer criado" /> : <div className="space-y-3">
+        {items.map((r) => <div key={r.id} className="group rounded-md border border-border p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-medium">{r.title}</p><div className="mt-1 flex flex-wrap gap-1.5"><Badge variant="secondary">{r.kind}</Badge><Badge variant={r.status === "Concluído" ? "success" : r.status === "Em revisão" ? "warning" : "secondary"}>{r.status}</Badge></div></div><div className="flex gap-1"><Button variant="ghost" size="icon" title="Editar" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" title="Copiar texto" onClick={() => copyText(r)}><Copy className="h-4 w-4" /></Button><Button variant="ghost" size="icon" title="Imprimir" onClick={() => { window.print(); }}><Printer className="h-4 w-4" /></Button><Button variant="ghost" size="icon" title="Excluir" onClick={() => remove(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>
+          <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-3"><span>Data: {formatDate(r.date)}</span>{r.responsible && <span>Responsável: {r.responsible}</span>}<span>Atualizado localmente</span></div>
+          {r.conclusion && <p className="mt-3 line-clamp-2 text-sm text-muted-foreground"><strong>Conclusão:</strong> {r.conclusion}</p>}
+        </div>)}
+      </div>}
+    </CardContent>
+    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto"><DialogHeader><DialogTitle>{editing ? "Editar documento técnico" : "Gerar laudo ou parecer técnico"}</DialogTitle><DialogDescription>O documento é salvo somente no armazenamento local deste navegador.</DialogDescription></DialogHeader><form onSubmit={save} className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Título *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex.: Laudo de análise documental" autoFocus /></div><div className="space-y-2"><Label>Tipo</Label><Select value={form.kind} onValueChange={(v) => setForm({ ...form, kind: v as ReportKind })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{REPORT_KINDS.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}</SelectContent></Select></div></div>
+      <div className="grid gap-4 sm:grid-cols-3"><div className="space-y-2"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as ReportStatus })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{REPORT_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Data</Label><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div><div className="space-y-2"><Label>Responsável</Label><Input value={form.responsible} onChange={(e) => setForm({ ...form, responsible: e.target.value })} /></div></div>
+      {(["objective", "methodology", "findings", "conclusion", "recommendations", "notes"] as const).map((field) => <div key={field} className="space-y-2"><Label>{({ objective: "Objetivo", methodology: "Metodologia", findings: "Achados e análise", conclusion: "Conclusão", recommendations: "Recomendações", notes: "Observações" } as Record<string, string>)[field]}</Label><Textarea value={form[field]} onChange={(e) => setForm({ ...form, [field]: e.target.value })} rows={field === "findings" ? 5 : 3} placeholder={field === "findings" ? "Descreva os elementos observados, análises realizadas e limitações." : ""} /></div>)}
+      <DialogFooter><Button type="submit">{editing ? "Salvar alterações" : "Salvar documento"}</Button></DialogFooter>
+    </form></DialogContent></Dialog>
+  </Card>;
+}
+
+function reportText(inv: Investigation, r: Report) {
+  return `${r.kind.toUpperCase()}\n${r.title}\n\nCaso: ${inv.title}\nTipo: ${inv.type}\nProcesso: ${inv.caseNumber || "Não informado"}\nData: ${formatDate(r.date)}\nResponsável: ${r.responsible || "Não informado"}\n\nOBJETIVO\n${r.objective || "Não informado"}\n\nMETODOLOGIA\n${r.methodology || "Não informado"}\n\nACHADOS E ANÁLISE\n${r.findings || "Não informado"}\n\nCONCLUSÃO\n${r.conclusion || "Não informado"}\n\nRECOMENDAÇÕES\n${r.recommendations || "Não informado"}\n\nOBSERVAÇÕES\n${r.notes || ""}`;
+}
+
+function DiligencesTab({ inv, onRefresh }: { inv: Investigation; onRefresh: () => void }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Diligence | null>(null);
+  const [form, setForm] = useState({ title: "", category: "Diligência", status: "Planejada" as DiligenceStatus, priority: "Média" as DiligencePriority, dueDate: "", responsible: "", notes: "" });
+  const items = diligencesStore.listByInvestigation(user!.id, inv.id);
+  const reset = () => setForm({ title: "", category: "Diligência", status: "Planejada", priority: "Média", dueDate: "", responsible: "", notes: "" });
+  const startCreate = () => { setEditing(null); reset(); setOpen(true); };
+  const startEdit = (d: Diligence) => { setEditing(d); setForm({ title: d.title, category: d.category, status: d.status, priority: d.priority, dueDate: d.dueDate, responsible: d.responsible, notes: d.notes }); setOpen(true); };
+  const save = (e: React.FormEvent) => { e.preventDefault(); if (!user || !form.title.trim()) { toast.error("Informe o nome da diligência."); return; } if (editing) { diligencesStore.update(user.id, editing.id, form); } else { diligencesStore.create(user.id, { investigationId: inv.id, ...form }); } setOpen(false); onRefresh(); toast.success(editing ? "Diligência atualizada." : "Diligência adicionada."); };
+  const remove = (id: string) => { if (!user) return; diligencesStore.remove(user.id, id); onRefresh(); };
+  return <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><ListChecks className="h-4 w-4 text-primary" /> Ferramentas investigativas</CardTitle><CardDescription>Planeje diligências, perícias, entrevistas, requisições e prazos do caso.</CardDescription></div><Button size="sm" onClick={startCreate}><Plus className="h-4 w-4" /> Nova diligência</Button></div></CardHeader><CardContent>{items.length === 0 ? <EmptyState icon={ListChecks} label="Nenhuma diligência planejada" /> : <div className="space-y-2">{items.map((d) => <div key={d.id} className="group flex items-start justify-between gap-3 rounded-md border border-border p-3"><div className="min-w-0"><p className="font-medium">{d.title}</p><div className="my-1 flex flex-wrap gap-1.5"><Badge variant={d.priority === "Urgente" || d.priority === "Alta" ? "destructive" : "secondary"}>{d.priority}</Badge><Badge variant={d.status === "Concluída" ? "success" : d.status === "Em andamento" ? "warning" : "secondary"}>{d.status}</Badge>{d.category && <Badge variant="outline">{d.category}</Badge>}</div><p className="text-xs text-muted-foreground">{d.dueDate && `Prazo: ${formatDate(d.dueDate)} • `}{d.responsible && `Responsável: ${d.responsible}`}</p>{d.notes && <p className="mt-1 text-sm text-muted-foreground">{d.notes}</p>}</div><div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" onClick={() => startEdit(d)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => remove(d.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>)}</div>}</CardContent><Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>{editing ? "Editar diligência" : "Nova diligência ou ferramenta"}</DialogTitle><DialogDescription>Use para acompanhar ações investigativas e periciais sem perder prazos.</DialogDescription></DialogHeader><form onSubmit={save} className="space-y-4"><div className="space-y-2"><Label>Título *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex.: Solicitar perícia no dispositivo" autoFocus /></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Categoria</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Perícia, entrevista, requisição..." /></div><div className="space-y-2"><Label>Responsável</Label><Input value={form.responsible} onChange={(e) => setForm({ ...form, responsible: e.target.value })} /></div></div><div className="grid gap-4 sm:grid-cols-3"><div className="space-y-2"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as DiligenceStatus })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{DILIGENCE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Prioridade</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v as DiligencePriority })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{DILIGENCE_PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Prazo</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div></div><div className="space-y-2"><Label>Observações</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} /></div><DialogFooter><Button type="submit">{editing ? "Salvar" : "Adicionar"}</Button></DialogFooter></form></DialogContent></Dialog></Card>;
 }
 
 // ---------------------------------------------------------------------------
