@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
+    <meta name="theme-color" content="#1d4ed8" />
+    <meta
+      name="description"
+      content="NEXUS Forense — workspace investigativo para organizar casos, fontes, evidências e conexões."
+    />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>NEXUS Forense</title>
+    <script type="module" crossorigin src="/NEXUS-FORENSE/assets/index-C69i0oWR.js"></script>
+    <link rel="stylesheet" crossorigin href="/NEXUS-FORENSE/assets/index-BwDFO9vN.css">
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("sw.js").catch(() => {});
+        });
+      }
+    </script>
+  </body>
+
+</html>
