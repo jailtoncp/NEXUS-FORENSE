@@ -3,6 +3,7 @@
 // without touching any component, because every screen imports from here.
 
 import { nanoid } from "nanoid";
+import { attachments } from "./attachments";
 import type {
   Evidence,
   Investigation,
@@ -242,6 +243,7 @@ export const investigations = {
     relevantInfo.removeAllByInvestigation(ownerId, id);
     reports.removeAllByInvestigation(ownerId, id);
     diligences.removeAllByInvestigation(ownerId, id);
+    void attachments.removeAllByInvestigation(ownerId, id);
   },
 };
 

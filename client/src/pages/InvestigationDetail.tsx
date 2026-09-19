@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { Activity, Car, ChevronRight, Clock, Fence as EvidenceIcon, FileText, Info, Link2, Network, Pencil, Plus, Trash2, Users, Calendar, Database, ClipboardCheck, ListChecks, Printer, Copy, Wrench } from "lucide-react";
+import { Activity, Car, ChevronRight, Clock, Fence as EvidenceIcon, FileText, Info, Link2, Network, Pencil, Plus, Trash2, Users, Calendar, Database, ClipboardCheck, ListChecks, Printer, Copy, Wrench, Paperclip, Download, Upload, Fingerprint, Image as ImageIcon } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +45,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { attachments, formatFileSize } from "@/lib/attachments";
 import {
   evidence as evidenceStore,
   events as eventsStore,
@@ -88,6 +89,9 @@ import {
   type Report,
   type ReportKind,
   type ReportStatus,
+  ATTACHMENT_KINDS,
+  type AttachmentKind,
+  type Attachment,
 } from "@/lib/types";
 
 function formatDate(iso: string): string {
@@ -210,6 +214,9 @@ export default function InvestigationDetail({ params }: Props) {
             <TabsTrigger value="tools" className="gap-1.5">
               <Wrench className="h-4 w-4" /> Ferramentas
             </TabsTrigger>
+            <TabsTrigger value="attachments" className="gap-1.5">
+              <Paperclip className="h-4 w-4" /> Anexos
+            </TabsTrigger>
             <TabsTrigger value="board" className="gap-1.5">
               <Network className="h-4 w-4" /> Mural
             </TabsTrigger>
@@ -238,6 +245,9 @@ export default function InvestigationDetail({ params }: Props) {
           </TabsContent>
           <TabsContent value="tools">
             <DiligencesTab inv={inv} onRefresh={bump} />
+          </TabsContent>
+          <TabsContent value="attachments">
+            <AttachmentsTab inv={inv} onRefresh={bump} />
           </TabsContent>
           <TabsContent value="board">
             <BoardTab data={data} />
@@ -1433,6 +1443,38 @@ function DiligencesTab({ inv, onRefresh }: { inv: Investigation; onRefresh: () =
   const save = (e: React.FormEvent) => { e.preventDefault(); if (!user || !form.title.trim()) { toast.error("Informe o nome da diligência."); return; } if (editing) { diligencesStore.update(user.id, editing.id, form); } else { diligencesStore.create(user.id, { investigationId: inv.id, ...form }); } setOpen(false); onRefresh(); toast.success(editing ? "Diligência atualizada." : "Diligência adicionada."); };
   const remove = (id: string) => { if (!user) return; diligencesStore.remove(user.id, id); onRefresh(); };
   return <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><ListChecks className="h-4 w-4 text-primary" /> Ferramentas investigativas</CardTitle><CardDescription>Planeje diligências, perícias, entrevistas, requisições e prazos do caso.</CardDescription></div><Button size="sm" onClick={startCreate}><Plus className="h-4 w-4" /> Nova diligência</Button></div></CardHeader><CardContent>{items.length === 0 ? <EmptyState icon={ListChecks} label="Nenhuma diligência planejada" /> : <div className="space-y-2">{items.map((d) => <div key={d.id} className="group flex items-start justify-between gap-3 rounded-md border border-border p-3"><div className="min-w-0"><p className="font-medium">{d.title}</p><div className="my-1 flex flex-wrap gap-1.5"><Badge variant={d.priority === "Urgente" || d.priority === "Alta" ? "destructive" : "secondary"}>{d.priority}</Badge><Badge variant={d.status === "Concluída" ? "success" : d.status === "Em andamento" ? "warning" : "secondary"}>{d.status}</Badge>{d.category && <Badge variant="outline">{d.category}</Badge>}</div><p className="text-xs text-muted-foreground">{d.dueDate && `Prazo: ${formatDate(d.dueDate)} • `}{d.responsible && `Responsável: ${d.responsible}`}</p>{d.notes && <p className="mt-1 text-sm text-muted-foreground">{d.notes}</p>}</div><div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" onClick={() => startEdit(d)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => remove(d.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>)}</div>}</CardContent><Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>{editing ? "Editar diligência" : "Nova diligência ou ferramenta"}</DialogTitle><DialogDescription>Use para acompanhar ações investigativas e periciais sem perder prazos.</DialogDescription></DialogHeader><form onSubmit={save} className="space-y-4"><div className="space-y-2"><Label>Título *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex.: Solicitar perícia no dispositivo" autoFocus /></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Categoria</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Perícia, entrevista, requisição..." /></div><div className="space-y-2"><Label>Responsável</Label><Input value={form.responsible} onChange={(e) => setForm({ ...form, responsible: e.target.value })} /></div></div><div className="grid gap-4 sm:grid-cols-3"><div className="space-y-2"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as DiligenceStatus })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{DILIGENCE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Prioridade</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v as DiligencePriority })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{DILIGENCE_PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Prazo</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div></div><div className="space-y-2"><Label>Observações</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} /></div><DialogFooter><Button type="submit">{editing ? "Salvar" : "Adicionar"}</Button></DialogFooter></form></DialogContent></Dialog></Card>;
+}
+
+function AttachmentsTab({ inv, onRefresh }: { inv: Investigation; onRefresh: () => void }) {
+  const { user } = useAuth();
+  const [kind, setKind] = useState<AttachmentKind>("Documento");
+  const [description, setDescription] = useState("");
+  const [busy, setBusy] = useState(false);
+  const items = attachments.list(user!.id, inv.id);
+
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    if (file.size > 50 * 1024 * 1024) { toast.error("Limite de 50 MB por arquivo."); return; }
+    setBusy(true);
+    try {
+      await attachments.create(user.id, inv.id, file, kind, description.trim());
+      setDescription(""); onRefresh(); toast.success("Arquivo anexado localmente.");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível salvar o arquivo."); }
+    finally { setBusy(false); }
+  };
+  const download = async (item: Attachment) => {
+    try {
+      const blob = await attachments.getBlob(item.id);
+      if (!blob) throw new Error("Arquivo não encontrado no armazenamento local.");
+      const url = URL.createObjectURL(blob); const link = document.createElement("a");
+      link.href = url; link.download = item.name; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível abrir o arquivo."); }
+  };
+  const remove = async (item: Attachment) => { if (!user) return; await attachments.remove(user.id, item.id); onRefresh(); toast.success("Anexo removido."); };
+
+  return <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><Paperclip className="h-4 w-4 text-primary" /> Anexos e arquivos periciais</CardTitle><CardDescription>Fotos, impressões digitais, laudos toxicológicos e outros arquivos ficam neste navegador.</CardDescription></div><div className="flex items-center gap-2"><Select value={kind} onValueChange={(v) => setKind(v as AttachmentKind)}><SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger><SelectContent>{ATTACHMENT_KINDS.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}</SelectContent></Select><label className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"><Upload className="h-4 w-4" />{busy ? "Salvando..." : "Anexar arquivo"}<Input type="file" className="hidden" onChange={upload} disabled={busy} /></label></div></div><div className="mt-2"><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição opcional: foto do local, impressão papilar, laudo toxicológico..." /></div></CardHeader><CardContent>{items.length === 0 ? <EmptyState icon={Paperclip} label="Nenhum arquivo anexado a esta investigação" /> : <div className="grid gap-3 sm:grid-cols-2">{items.map((item) => <div key={item.id} className="group rounded-md border border-border p-3"><div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">{item.kind === "Foto" ? <ImageIcon className="h-5 w-5 text-cyan-400" /> : item.kind === "Impressão digital" ? <Fingerprint className="h-5 w-5 text-amber-400" /> : <FileText className="h-5 w-5 text-primary" />}</div><div className="min-w-0 flex-1"><p className="truncate font-medium" title={item.name}>{item.name}</p><div className="mt-1 flex flex-wrap gap-1.5"><Badge variant="secondary" className="text-xs">{item.kind}</Badge><Badge variant="outline" className="text-xs">{formatFileSize(item.size)}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{item.mimeType} • {formatDate(item.createdAt)}</p>{item.description && <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>}</div></div><div className="mt-3 flex justify-end gap-1"><Button variant="outline" size="sm" onClick={() => download(item)}><Download className="h-4 w-4" /> Baixar</Button><Button variant="ghost" size="icon" onClick={() => remove(item)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>)}</div>}</CardContent></Card>;
 }
 
 // ---------------------------------------------------------------------------

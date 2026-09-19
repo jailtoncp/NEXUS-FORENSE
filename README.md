@@ -11,10 +11,11 @@ Workspace investigativo em formato PWA para organizar casos, fontes públicas, e
 - Linha do tempo cronológica, busca global e mural de relações por investigação.
 - Geração local de laudos técnicos, pareceres técnicos e relatórios investigativos, com edição, impressão e cópia do texto.
 - Gestão de diligências, perícias, entrevistas e requisições com prioridade, responsável, prazo e status.
+- Anexos locais para fotos, impressões digitais, laudos toxicológicos, laudos periciais, documentos, áudios e vídeos, com download e exclusão.
 - Estados vazios para iniciar o uso sem dados fictícios.
 - Manifesto e service worker básicos para instalação como PWA.
 
-Esta versão é destinada a uso pessoal local. Os dados permanecem no armazenamento do navegador e não são enviados para serviços externos. A senha usa um hash leve adequado apenas para esse cenário local; autenticação robusta e sincronização ficam para uma etapa futura.
+Esta versão é destinada a uso pessoal local. Os dados permanecem no armazenamento do navegador e não são enviados para serviços externos. Registros ficam no `localStorage` e os arquivos binários ficam no IndexedDB do navegador. A senha usa um hash leve adequado apenas para esse cenário local; autenticação robusta e sincronização ficam para uma etapa futura.
 
 ## Executar localmente
 

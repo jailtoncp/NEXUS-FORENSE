@@ -156,6 +156,27 @@ export const DILIGENCE_PRIORITIES: DiligencePriority[] = [
   "Urgente",
 ];
 
+export type AttachmentKind =
+  | "Foto"
+  | "Impressão digital"
+  | "Laudo toxicológico"
+  | "Laudo pericial"
+  | "Documento"
+  | "Áudio"
+  | "Vídeo"
+  | "Outro";
+
+export const ATTACHMENT_KINDS: AttachmentKind[] = [
+  "Foto",
+  "Impressão digital",
+  "Laudo toxicológico",
+  "Laudo pericial",
+  "Documento",
+  "Áudio",
+  "Vídeo",
+  "Outro",
+];
+
 export interface User {
   id: UUID;
   name: string;
@@ -285,6 +306,18 @@ export interface Diligence {
   dueDate: string;
   responsible: string;
   notes: string;
+  createdAt: string;
+}
+
+export interface Attachment {
+  id: UUID;
+  investigationId: UUID;
+  ownerId: UUID;
+  name: string;
+  kind: AttachmentKind;
+  mimeType: string;
+  size: number;
+  description: string;
   createdAt: string;
 }
 
