@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { Activity, Car, ChevronRight, Clock, Fence as EvidenceIcon, FileText, Info, Link2, Network, Pencil, Plus, Trash2, Users, Calendar, Database, ClipboardCheck, ListChecks, Printer, Copy, Wrench, Paperclip, Download, Upload, Fingerprint, Image as ImageIcon, ShieldCheck } from "lucide-react";
+import { Activity, Car, ChevronRight, Clock, Fence as EvidenceIcon, FileText, Info, Link2, Network, Pencil, Plus, Trash2, Users, Calendar, Database, ClipboardCheck, Printer, Copy, Paperclip, Download, Upload, Fingerprint, Image as ImageIcon, ShieldCheck, Video } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ForensicsTab } from "@/components/ForensicsTab";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,6 @@ import {
   sources as sourcesStore,
   vehicles as vehiclesStore,
   reports as reportsStore,
-  diligences as diligencesStore,
 } from "@/lib/storage";
 import {
   CONFIDENCE_LEVELS,
@@ -214,14 +213,11 @@ export default function InvestigationDetail({ params }: Props) {
             <TabsTrigger value="reports" className="gap-1.5">
               <ClipboardCheck className="h-4 w-4" /> Laudos
             </TabsTrigger>
-            <TabsTrigger value="tools" className="gap-1.5">
-              <Wrench className="h-4 w-4" /> Ferramentas
-            </TabsTrigger>
             <TabsTrigger value="attachments" className="gap-1.5">
               <Paperclip className="h-4 w-4" /> Anexos
             </TabsTrigger>
             <TabsTrigger value="forensics" className="gap-1.5">
-              <ShieldCheck className="h-4 w-4" /> Perícia V4
+              <ShieldCheck className="h-4 w-4" /> Perícia e integridade
             </TabsTrigger>
             <TabsTrigger value="board" className="gap-1.5">
               <Network className="h-4 w-4" /> Mural
@@ -248,9 +244,6 @@ export default function InvestigationDetail({ params }: Props) {
           </TabsContent>
           <TabsContent value="reports">
             <ReportsTab inv={inv} onRefresh={bump} />
-          </TabsContent>
-          <TabsContent value="tools">
-            <DiligencesTab inv={inv} onRefresh={bump} />
           </TabsContent>
           <TabsContent value="attachments">
             <AttachmentsTab inv={inv} onRefresh={bump} />
@@ -451,25 +444,29 @@ function RelevantInfoSection({
 }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<RelevantInfo | null>(null);
   const [label, setLabel] = useState("");
   const [value, setValue] = useState("");
   const [category, setCategory] = useState("");
   const [notes, setNotes] = useState("");
 
+  const startCreate = () => { setEditing(null); setLabel(""); setValue(""); setCategory(""); setNotes(""); setOpen(true); };
+  const startEdit = (item: RelevantInfo) => { setEditing(item); setLabel(item.label); setValue(item.value); setCategory(item.category); setNotes(item.notes); setOpen(true); };
+
   const create = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !label.trim()) return;
-    infoStore.create(user.id, {
-      investigationId: inv.id,
-      label: label.trim(),
-      value: value.trim(),
-      category: category.trim(),
-      notes: notes.trim(),
-    });
+    if (editing) {
+      infoStore.update(user.id, editing.id, { label: label.trim(), value: value.trim(), category: category.trim(), notes: notes.trim() });
+      toast.success("Informação atualizada.");
+    } else {
+      infoStore.create(user.id, { investigationId: inv.id, label: label.trim(), value: value.trim(), category: category.trim(), notes: notes.trim() });
+      toast.success("Informação adicionada.");
+    }
     setLabel(""); setValue(""); setCategory(""); setNotes("");
+    setEditing(null);
     setOpen(false);
     onRefresh();
-    toast.success("Informação adicionada.");
   };
 
   const remove = (id: string) => {
@@ -503,22 +500,23 @@ function RelevantInfoSection({
                   <p className="mt-1 text-xs text-muted-foreground">{r.notes}</p>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => remove(r.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <div className="flex shrink-0 gap-1">
+                <Button variant="ghost" size="icon" title="Editar" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" title="Excluir" onClick={() => remove(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+              </div>
             </div>
           ))}
         </div>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={startCreate}>
             <Plus className="h-4 w-4" /> Adicionar informação
           </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Informação relevante</DialogTitle>
+            <DialogTitle>{editing ? "Editar informação relevante" : "Informação relevante"}</DialogTitle>
             <DialogDescription>
               Placa, RENAVAM, CPF, CNPJ, número de processo, endereço, etc.
             </DialogDescription>
@@ -558,7 +556,7 @@ function RelevantInfoSection({
               />
             </div>
             <DialogFooter>
-              <Button type="submit">Adicionar</Button>
+              <Button type="submit">{editing ? "Salvar alterações" : "Adicionar"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -665,7 +663,7 @@ function PeopleTab({
                     {p.address && <p>{p.address}</p>}
                   </div>
                 </div>
-                <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex shrink-0 gap-1 opacity-100">
                   <Button variant="ghost" size="icon" onClick={() => startEdit(p)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -823,7 +821,7 @@ function VehiclesTab({
                     {v.owner && <p>Proprietário: {v.owner}</p>}
                   </div>
                 </div>
-                <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex shrink-0 gap-1 opacity-100">
                   <Button variant="ghost" size="icon" onClick={() => startEdit(v)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -981,7 +979,7 @@ function TimelineTab({
                     {ev.description && <p className="text-sm text-muted-foreground">{ev.description}</p>}
                     {ev.notes && <p className="mt-1 text-xs text-muted-foreground">{ev.notes}</p>}
                   </div>
-                  <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex shrink-0 gap-1 opacity-100">
                     <Button variant="ghost" size="icon" onClick={() => startEdit(ev)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -1143,7 +1141,7 @@ function EvidenceTab({
                     {ev.description && <p>{ev.description}</p>}
                   </div>
                 </div>
-                <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex shrink-0 gap-1 opacity-100">
                   <Button variant="ghost" size="icon" onClick={() => startEdit(ev)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -1311,7 +1309,7 @@ function SourcesTab({
                     {s.description && <p>{s.description}</p>}
                   </div>
                 </div>
-                <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex shrink-0 gap-1 opacity-100">
                   <Button variant="ghost" size="icon" onClick={() => startEdit(s)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -1448,18 +1446,22 @@ function reportText(inv: Investigation, r: Report) {
   return `${r.kind.toUpperCase()}\n${r.title}\n\nCaso: ${inv.title}\nTipo: ${inv.type}\nProcesso: ${inv.caseNumber || "Não informado"}\nData: ${formatDate(r.date)}\nResponsável: ${r.responsible || "Não informado"}\n\nOBJETIVO\n${r.objective || "Não informado"}\n\nMETODOLOGIA\n${r.methodology || "Não informado"}\n\nACHADOS E ANÁLISE\n${r.findings || "Não informado"}\n\nCONCLUSÃO\n${r.conclusion || "Não informado"}\n\nRECOMENDAÇÕES\n${r.recommendations || "Não informado"}\n\nOBSERVAÇÕES\n${r.notes || ""}`;
 }
 
-function DiligencesTab({ inv, onRefresh }: { inv: Investigation; onRefresh: () => void }) {
-  const { user } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Diligence | null>(null);
-  const [form, setForm] = useState({ title: "", category: "Diligência", status: "Planejada" as DiligenceStatus, priority: "Média" as DiligencePriority, dueDate: "", responsible: "", notes: "" });
-  const items = diligencesStore.listByInvestigation(user!.id, inv.id);
-  const reset = () => setForm({ title: "", category: "Diligência", status: "Planejada", priority: "Média", dueDate: "", responsible: "", notes: "" });
-  const startCreate = () => { setEditing(null); reset(); setOpen(true); };
-  const startEdit = (d: Diligence) => { setEditing(d); setForm({ title: d.title, category: d.category, status: d.status, priority: d.priority, dueDate: d.dueDate, responsible: d.responsible, notes: d.notes }); setOpen(true); };
-  const save = (e: React.FormEvent) => { e.preventDefault(); if (!user || !form.title.trim()) { toast.error("Informe o nome da diligência."); return; } if (editing) { diligencesStore.update(user.id, editing.id, form); } else { diligencesStore.create(user.id, { investigationId: inv.id, ...form }); } setOpen(false); onRefresh(); toast.success(editing ? "Diligência atualizada." : "Diligência adicionada."); };
-  const remove = (id: string) => { if (!user) return; diligencesStore.remove(user.id, id); onRefresh(); };
-  return <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><ListChecks className="h-4 w-4 text-primary" /> Ferramentas investigativas</CardTitle><CardDescription>Planeje diligências, perícias, entrevistas, requisições e prazos do caso.</CardDescription></div><Button size="sm" onClick={startCreate}><Plus className="h-4 w-4" /> Nova diligência</Button></div></CardHeader><CardContent>{items.length === 0 ? <EmptyState icon={ListChecks} label="Nenhuma diligência planejada" /> : <div className="space-y-2">{items.map((d) => <div key={d.id} className="group flex items-start justify-between gap-3 rounded-md border border-border p-3"><div className="min-w-0"><p className="font-medium">{d.title}</p><div className="my-1 flex flex-wrap gap-1.5"><Badge variant={d.priority === "Urgente" || d.priority === "Alta" ? "destructive" : "secondary"}>{d.priority}</Badge><Badge variant={d.status === "Concluída" ? "success" : d.status === "Em andamento" ? "warning" : "secondary"}>{d.status}</Badge>{d.category && <Badge variant="outline">{d.category}</Badge>}</div><p className="text-xs text-muted-foreground">{d.dueDate && `Prazo: ${formatDate(d.dueDate)} • `}{d.responsible && `Responsável: ${d.responsible}`}</p>{d.notes && <p className="mt-1 text-sm text-muted-foreground">{d.notes}</p>}</div><div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" onClick={() => startEdit(d)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => remove(d.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>)}</div>}</CardContent><Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>{editing ? "Editar diligência" : "Nova diligência ou ferramenta"}</DialogTitle><DialogDescription>Use para acompanhar ações investigativas e periciais sem perder prazos.</DialogDescription></DialogHeader><form onSubmit={save} className="space-y-4"><div className="space-y-2"><Label>Título *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex.: Solicitar perícia no dispositivo" autoFocus /></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Categoria</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Perícia, entrevista, requisição..." /></div><div className="space-y-2"><Label>Responsável</Label><Input value={form.responsible} onChange={(e) => setForm({ ...form, responsible: e.target.value })} /></div></div><div className="grid gap-4 sm:grid-cols-3"><div className="space-y-2"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as DiligenceStatus })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{DILIGENCE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Prioridade</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v as DiligencePriority })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{DILIGENCE_PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Prazo</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div></div><div className="space-y-2"><Label>Observações</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} /></div><DialogFooter><Button type="submit">{editing ? "Salvar" : "Adicionar"}</Button></DialogFooter></form></DialogContent></Dialog></Card>;
+function AttachmentPreview({ item }: { item: Attachment }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+    void attachments.getPreviewBlob(item).then((blob) => {
+      if (!active || !blob) return;
+      objectUrl = URL.createObjectURL(blob);
+      setUrl(objectUrl);
+    });
+    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [item]);
+  if (!url) return <div className="flex h-28 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">Carregando pré-visualização…</div>;
+  if (item.mimeType.startsWith("video/")) return <video className="h-28 w-full rounded-md bg-black object-contain" src={url} controls preload="metadata" />;
+  if (item.mimeType.startsWith("image/")) return <img className="h-28 w-full rounded-md bg-muted object-contain" src={url} alt={`Pré-visualização de ${item.name}`} />;
+  return <div className="flex h-28 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">Pré-visualização indisponível para este formato</div>;
 }
 
 function AttachmentsTab({ inv, onRefresh }: { inv: Investigation; onRefresh: () => void }) {
@@ -1473,7 +1475,7 @@ function AttachmentsTab({ inv, onRefresh }: { inv: Investigation; onRefresh: () 
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !user) return;
-    if (file.size > 50 * 1024 * 1024) { toast.error("Limite de 50 MB por arquivo."); return; }
+    if (file.size > 100 * 1024 * 1024) { toast.error("Limite de 100 MB por arquivo."); return; }
     setBusy(true);
     try {
       await attachments.create(user.id, inv.id, file, kind, description.trim());
@@ -1491,7 +1493,7 @@ function AttachmentsTab({ inv, onRefresh }: { inv: Investigation; onRefresh: () 
   };
   const remove = async (item: Attachment) => { if (!user) return; await attachments.remove(user.id, item.id); onRefresh(); toast.success("Anexo removido."); };
 
-  return <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><Paperclip className="h-4 w-4 text-primary" /> Anexos e arquivos periciais</CardTitle><CardDescription>Fotos, impressões digitais, laudos toxicológicos e outros arquivos ficam neste navegador.</CardDescription></div><div className="flex items-center gap-2"><Select value={kind} onValueChange={(v) => setKind(v as AttachmentKind)}><SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger><SelectContent>{ATTACHMENT_KINDS.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}</SelectContent></Select><label className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"><Upload className="h-4 w-4" />{busy ? "Salvando..." : "Anexar arquivo"}<Input type="file" className="hidden" onChange={upload} disabled={busy} /></label></div></div><div className="mt-2"><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição opcional: foto do local, impressão papilar, laudo toxicológico..." /></div></CardHeader><CardContent>{items.length === 0 ? <EmptyState icon={Paperclip} label="Nenhum arquivo anexado a esta investigação" /> : <div className="grid gap-3 sm:grid-cols-2">{items.map((item) => <div key={item.id} className="group rounded-md border border-border p-3"><div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">{item.kind === "Foto" ? <ImageIcon className="h-5 w-5 text-cyan-400" /> : item.kind === "Impressão digital" ? <Fingerprint className="h-5 w-5 text-amber-400" /> : <FileText className="h-5 w-5 text-primary" />}</div><div className="min-w-0 flex-1"><p className="truncate font-medium" title={item.name}>{item.name}</p><div className="mt-1 flex flex-wrap gap-1.5"><Badge variant="secondary" className="text-xs">{item.kind}</Badge><Badge variant="outline" className="text-xs">{formatFileSize(item.size)}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{item.mimeType} • {formatDate(item.createdAt)}</p>{item.description && <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>}</div></div><div className="mt-3 flex justify-end gap-1"><Button variant="outline" size="sm" onClick={() => download(item)}><Download className="h-4 w-4" /> Baixar</Button><Button variant="ghost" size="icon" onClick={() => remove(item)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>)}</div>}</CardContent></Card>;
+  return <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><Paperclip className="h-4 w-4 text-primary" /> Arquivos do caso</CardTitle><CardDescription>Um único registro por arquivo. Imagens e vídeos possuem pré-visualização; miniaturas técnicas ficam ocultas.</CardDescription></div><div className="flex items-center gap-2"><Select value={kind} onValueChange={(v) => setKind(v as AttachmentKind)}><SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger><SelectContent>{ATTACHMENT_KINDS.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}</SelectContent></Select><label className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"><Upload className="h-4 w-4" />{busy ? "Salvando..." : "Anexar arquivo"}<Input type="file" className="hidden" onChange={upload} disabled={busy} /></label></div></div><div className="mt-2"><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição opcional: foto do local, laudo, documento..." /></div></CardHeader><CardContent>{items.length === 0 ? <EmptyState icon={Paperclip} label="Nenhum arquivo anexado a esta investigação" /> : <div className="grid gap-3 sm:grid-cols-2">{items.map((item) => <div key={item.id} className="group rounded-md border border-border p-3"><AttachmentPreview item={item} /><div className="mt-3 flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">{item.mimeType.startsWith("image/") ? <ImageIcon className="h-5 w-5 text-cyan-400" /> : item.mimeType.startsWith("video/") ? <Video className="h-5 w-5 text-violet-400" /> : item.kind === "Impressão digital" ? <Fingerprint className="h-5 w-5 text-amber-400" /> : <FileText className="h-5 w-5 text-primary" />}</div><div className="min-w-0 flex-1"><p className="truncate font-medium" title={item.name}>{item.name}</p><div className="mt-1 flex flex-wrap gap-1.5"><Badge variant="secondary" className="text-xs">{item.kind}</Badge><Badge variant="outline" className="text-xs">{formatFileSize(item.size)}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{item.mimeType} • {formatDate(item.createdAt)}</p>{item.description && <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>}</div></div><div className="mt-3 flex justify-end gap-1"><Button variant="outline" size="sm" onClick={() => download(item)}><Download className="h-4 w-4" /> Baixar original</Button><Button variant="ghost" size="icon" title="Excluir" onClick={() => remove(item)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>)}</div>}</CardContent></Card>;
 }
 
 // ---------------------------------------------------------------------------
